@@ -9,14 +9,18 @@ sync to this computer, all without leaving the desktop.
 
 ## What it shows
 
-The cloud icon in the bar tells you the state at a glance:
+The cloud icon in the bar shows the state inside the cloud:
 
-| Icon | Meaning |
+| Cloud shows | Meaning |
 |---|---|
-| Cloud with a tick | Up to date |
-| Cloud with arrows | Syncing |
-| Cloud crossed out, dimmed | Paused, or offline |
-| Cloud with an alert, in red | Something needs attention (a failed upload, an expired sign-in, a missing service) |
+| ✓ check | Up to date |
+| ⟳ turning arrows | Syncing (or starting up) |
+| ‖ pause bars, dimmed | Paused |
+| ! exclamation mark, in red | Something needs attention (a failed upload, an expired sign-in, a missing service) |
+| Crossed-out outline cloud | Offline, or the OneDrive client isn't installed |
+
+The symbol is cut out of the cloud, so it reads on any bar style, including
+transparent ones. With Omarchy's animations turned off, the arrows don't turn.
 
 Click it to open the panel:
 

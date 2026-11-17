@@ -7,7 +7,7 @@ const assert = require("assert")
 // Model.js is a QML ".pragma library" file; drop the pragma and load it as plain JS.
 const source = fs.readFileSync(path.join(__dirname, "..", "Model.js"), "utf8").replace(/^\.pragma library\s*$/m, "")
 const Model = {}
-vm.runInNewContext(source + "\nObject.assign(exports, { parseStatus, clip, toInt, relativeTime, sizeText, stateGlyph, fileGlyph, kindKey, fileUri })",
+vm.runInNewContext(source + "\nObject.assign(exports, { parseStatus, clip, toInt, relativeTime, sizeText, statusSymbol, fileGlyph, kindKey, fileUri })",
   { exports: Model, String, Math, Number, JSON, Array, isFinite })
 
 let passed = 0
@@ -78,9 +78,12 @@ test("file URIs are percent-encoded per segment", () => {
   assert.strictEqual(Model.fileUri("/home/a/My Files/Verträge #1.pdf"), "file:///home/a/My%20Files/Vertr%C3%A4ge%20%231.pdf")
 })
 
-test("every state has a glyph", () => {
-  for (const s of ["synced", "syncing", "starting", "paused", "offline", "error", "notInstalled", "serviceMissing"])
-    assert.ok(Model.stateGlyph(s).length > 0, s)
+test("every state has a symbol, except the crossed-out ones", () => {
+  for (const s of ["synced", "syncing", "starting", "paused", "error", "serviceMissing"])
+    assert.ok(Model.statusSymbol(s).length > 0, s)
+  assert.strictEqual(Model.statusSymbol("offline"), "")
+  assert.strictEqual(Model.statusSymbol("notInstalled"), "")
+  assert.strictEqual(Model.statusSymbol("syncing"), Model.statusSymbol("starting"))
 })
 
 test("change kinds map to translation keys", () => {

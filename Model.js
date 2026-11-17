@@ -77,12 +77,13 @@ function sizeText(bytes, formatNumber) {
 // Nerd Font glyphs, built from code points so the source stays plain ASCII.
 function glyph(code) { return String.fromCodePoint(code) }
 
-function stateGlyph(state) {
-  // Syncing keeps the plain cloud; the bar adds a pulsing dot beside it.
-  if (state === "syncing" || state === "starting") return glyph(0xF015F)  // cloud
-  if (state === "error" || state === "serviceMissing") return glyph(0xF09E0) // cloud-alert
-  if (state === "paused" || state === "offline" || state === "notInstalled") return glyph(0xF0164) // cloud-off-outline
-  return glyph(0xF0160)                                                    // cloud-check
+// The symbol cut out of the bar cloud for each state ("" = none).
+function statusSymbol(state) {
+  if (state === "syncing" || state === "starting") return glyph(0xF04E6)  // sync arrows
+  if (state === "paused") return glyph(0xF03E4)                            // pause
+  if (state === "error" || state === "serviceMissing") return glyph(0xF0205) // exclamation
+  if (state === "offline" || state === "notInstalled") return ""           // crossed-out cloud instead
+  return glyph(0xF012C)                                                    // check
 }
 
 function logoGlyph() { return glyph(0xF03CA) } // microsoft-onedrive

@@ -1,0 +1,62 @@
+{
+  "title": "OneDrive",
+  "state.synced": "Up to date",
+  "state.syncing": "Syncing…",
+  "state.starting": "Starting…",
+  "state.paused": "Syncing paused",
+  "state.error": "Needs attention",
+  "state.notInstalled": "OneDrive client not installed",
+  "lastSynced": "Last synced %1",
+  "pause": "Pause syncing",
+  "resume": "Resume syncing",
+  "openFolder": "Open OneDrive folder",
+  "syncNow": "Sync now",
+  "showLog": "Show sync log",
+  "syncNowStarted": "Sync started. It takes about 20 seconds to begin.",
+  "commandFailed": "That didn't work: %1",
+  "readFailed": "Couldn't read the OneDrive status.",
+  "folder": "Folder",
+  "stored": "On this laptop",
+  "storedValue": {
+    "one": "%1 file · %2",
+    "other": "%1 files · %2"
+  },
+  "recentChanges": "Recent changes",
+  "noChanges": "No files changed since you logged in.",
+  "removed": "No longer on this laptop",
+  "change.downloaded": "Downloaded",
+  "change.uploaded": "Uploaded",
+  "change.deletedOnline": "Deleted online",
+  "change.deletedLocal": "Deleted here",
+  "change.failed": "Failed",
+  "change.changed": "Changed",
+  "time.justNow": "just now",
+  "time.minutes": {
+    "one": "%1 min ago",
+    "other": "%1 min ago"
+  },
+  "time.hours": {
+    "one": "%1 hour ago",
+    "other": "%1 hours ago"
+  },
+  "time.days": {
+    "one": "%1 day ago",
+    "other": "%1 days ago"
+  },
+  "chooseFolders": "Choose folders to sync",
+  "picker.hint": "Tick the folders you want on this laptop. Click a folder's name to look inside it.",
+  "picker.loading": "Loading folders from OneDrive…",
+  "picker.empty": "No folders in here.",
+  "picker.loadFailed": "Couldn't load the folders from OneDrive.",
+  "picker.applyFailed": "Couldn't save the folder selection.",
+  "picker.back": "Back",
+  "picker.partial": "some inside",
+  "picker.selected": "Syncing:",
+  "picker.noneSelected": "Tick at least one folder. With none ticked, OneDrive would download everything.",
+  "picker.cancel": "Cancel",
+  "picker.apply": "Apply",
+  "picker.applied": "Updating your folders. Follow the progress in the terminal window.",
+  "state.offline": "Offline: can't reach OneDrive",
+  "state.serviceMissing": "OneDrive service not found",
+  "picker.disclosure": "Folder names are read from Microsoft using the OneDrive client's sign-in."
+}

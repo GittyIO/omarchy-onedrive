@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "id": "gittyio.onedrive",
+  "name": "OneDrive",
+  "version": "1.1.0",
+  "author": "GittyIO",
+  "license": "MIT",
+  "description": "Sync status, recent file changes, pause/resume and a folder picker for the OneDrive Client for Linux (abraunegg) in the Omarchy bar.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "OneDrive",
+    "description": "See whether OneDrive is up to date, pause or resume syncing, and open recently synced files.",
+    "category": "Files",
+    "allowMultiple": true,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 15,
+      "configDir": "",
+      "serviceName": "onedrive",
+      "serviceScope": "user",
+      "folderPicker": true
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 5,
+        "max": 3600,
+        "step": 5,
+        "defaultValue": 15
+      },
+      {
+        "key": "configDir",
+        "type": "path",
+        "label": "Client config folder",
+        "defaultValue": "",
+        "description": "The client's --confdir. Leave empty for ~/.config/onedrive."
+      },
+      {
+        "key": "serviceName",
+        "type": "string",
+        "label": "Service name",
+        "defaultValue": "onedrive",
+        "description": "The systemd unit that runs the client, e.g. onedrive or onedrive-work."
+      },
+      {
+        "key": "serviceScope",
+        "type": "enum",
+        "label": "Service type",
+        "options": [
+          "user",
+          "system"
+        ],
+        "defaultValue": "user",
+        "description": "System services are shown read-only: pause, sync now and the folder picker need a user service."
+      },
+      {
+        "key": "folderPicker",
+        "type": "boolean",
+        "label": "Folder picker",
+        "defaultValue": true,
+        "description": "Lets you choose synced folders. It reads folder names from Microsoft using the client's sign-in."
+      }
+    ]
+  }
+}

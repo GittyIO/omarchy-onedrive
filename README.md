@@ -1,0 +1,120 @@
+# OneDrive for the Omarchy bar
+
+A bar widget for the [OneDrive Client for Linux](https://github.com/abraunegg/onedrive)
+(abraunegg). It shows whether your files are up to date, lets you pause or
+resume syncing, lists what changed recently, and lets you choose which folders
+sync to this computer, all without leaving the desktop.
+
+![The OneDrive panel](preview.png)
+
+## What it shows
+
+The cloud icon in the bar tells you the state at a glance:
+
+| Icon | Meaning |
+|---|---|
+| Cloud with a tick | Up to date |
+| Cloud with arrows | Syncing |
+| Cloud crossed out, dimmed | Paused, or offline |
+| Cloud with an alert, in red | Something needs attention (a failed upload, an expired sign-in, a missing service) |
+
+Click it to open the panel:
+
+- **Status and last sync time**, with a switch to pause or resume syncing.
+- **Buttons** to open the OneDrive folder, sync now, show the sync log, and choose folders.
+- **Where your files are** and how much space they take on this computer.
+- **Recent changes**: files downloaded, uploaded or deleted since you logged in. Click one to show it in Files.
+
+Right-click the icon to refresh, middle-click to open the OneDrive folder.
+In the panel: **O** open folder, **S** sync now, **P** pause/resume, **L** log,
+**F** choose folders, arrow keys and **Enter** to open recent files.
+
+## Choosing folders
+
+The folder picker shows your OneDrive folders with tick boxes. Tick what you
+want on this computer, untick what you don't, and click **Apply**. A terminal
+window opens and runs the one-time `--resync` the client needs after a
+`sync_list` change, then background syncing starts again.
+
+- Your previous `sync_list` is backed up next to it (`sync_list.bak.<time>`).
+- Comments and exclusion rules (`!`, `-`) in `sync_list` are kept as they are.
+- It never saves an empty selection, because an empty `sync_list` makes the client sync your entire OneDrive.
+- Unticking a folder stops it syncing. Its files stay on OneDrive, and the copy already on this computer is left in place for you to delete if you want.
+
+### How the picker reads your folders (please read)
+
+Listing folders through the client itself means scanning the whole drive, which
+can take many minutes. So the picker asks Microsoft Graph for **folder names
+only**, read-only, using the client's existing sign-in:
+
+- It reads the client's `refresh_token` and redeems it with Microsoft for a
+  short-lived access token, using the client's own app registration and the
+  least-privileged scope Microsoft accepts (`Files.Read` first).
+- **It never writes the client's token file.** The short-lived access token is
+  kept in a file only you can read under `$XDG_RUNTIME_DIR` (memory-backed,
+  cleared at logout).
+- It only contacts `login.microsoftonline.com` and `graph.microsoft.com`, over HTTPS.
+- It respects `application_id`, `azure_tenant_id` and `drive_id` from the
+  client's config, so business accounts and SharePoint libraries work.
+  National clouds (`azure_ad_endpoint`) are not supported by the picker.
+
+If you'd rather the widget never talk to Microsoft, turn off **Folder picker**
+in the widget settings. Everything else works from local information only.
+
+## What it reads
+
+Apart from the picker, the widget only reads local information and never changes your files:
+
+- The client's systemd unit (running or not), via `systemctl`.
+- The client's `monitor-status.json` (client v2.5.10 and later), for the sync state.
+- The client's log in the journal, for recent file changes and error messages.
+- The client's `config` and `sync_list`, and the size of your OneDrive folder on disk.
+
+Pause, resume and sync now are `systemctl --user stop/start/restart` on the client's unit.
+
+## Requirements
+
+- Omarchy with the Omarchy shell
+- The OneDrive Client for Linux **v2.5 or later**, signed in and running as a
+  **systemd user service** (`systemctl --user enable --now onedrive`)
+- `python3` (already part of Omarchy)
+
+## Install
+
+```bash
+omarchy plugin add https://github.com/GittyIO/omarchy-onedrive.git --enable
+```
+
+## Settings
+
+In the widget settings, or on the widget's entry in `~/.config/omarchy/shell.json`:
+
+| Setting | Default | What it does |
+|---|---|---|
+| `refreshIntervalSec` | `15` | How often the status is checked |
+| `configDir` | empty | The client's `--confdir`; empty means `~/.config/onedrive` |
+| `serviceName` | `onedrive` | The systemd unit that runs the client |
+| `serviceScope` | `user` | `system` shows a system service read-only (no pause, sync now or folder picker) |
+| `folderPicker` | `true` | Show the folder picker (see above) |
+
+**Two accounts?** Add the widget twice and point the second one at the other
+account's `configDir` and `serviceName` (for example `~/.config/onedrive-work`
+and `onedrive-work`).
+
+## Development
+
+```bash
+tests/run.sh
+```
+
+The tests cover the log and status-file readers, the folder rules (including
+refusing an empty selection and unsafe paths), markup-shaped file names, the
+display helpers and the translations. They never touch the network or your real
+OneDrive config. `node` is needed for the display-helper tests.
+
+Translations live in `i18n/` (English and German so far). Other languages fall
+back to English; new catalogs are welcome.
+
+## License
+
+MIT

@@ -1,0 +1,62 @@
+{
+  "title": "OneDrive",
+  "state.synced": "Auf dem neuesten Stand",
+  "state.syncing": "Wird synchronisiert…",
+  "state.starting": "Wird gestartet…",
+  "state.paused": "Synchronisierung pausiert",
+  "state.error": "Problem gefunden",
+  "state.notInstalled": "OneDrive-Client nicht installiert",
+  "lastSynced": "Zuletzt synchronisiert %1",
+  "pause": "Synchronisierung pausieren",
+  "resume": "Synchronisierung fortsetzen",
+  "openFolder": "OneDrive-Ordner öffnen",
+  "syncNow": "Jetzt synchronisieren",
+  "showLog": "Sync-Protokoll anzeigen",
+  "syncNowStarted": "Synchronisierung gestartet. Sie beginnt in etwa 20 Sekunden.",
+  "commandFailed": "Das hat nicht geklappt: %1",
+  "readFailed": "OneDrive-Status konnte nicht gelesen werden.",
+  "folder": "Ordner",
+  "stored": "Auf diesem Laptop",
+  "storedValue": {
+    "one": "%1 Datei · %2",
+    "other": "%1 Dateien · %2"
+  },
+  "recentChanges": "Letzte Änderungen",
+  "noChanges": "Seit der Anmeldung wurden keine Dateien geändert.",
+  "removed": "Nicht mehr auf diesem Laptop",
+  "change.downloaded": "Heruntergeladen",
+  "change.uploaded": "Hochgeladen",
+  "change.deletedOnline": "Online gelöscht",
+  "change.deletedLocal": "Hier gelöscht",
+  "change.failed": "Fehlgeschlagen",
+  "change.changed": "Geändert",
+  "time.justNow": "gerade eben",
+  "time.minutes": {
+    "one": "vor %1 Min.",
+    "other": "vor %1 Min."
+  },
+  "time.hours": {
+    "one": "vor %1 Stunde",
+    "other": "vor %1 Stunden"
+  },
+  "time.days": {
+    "one": "vor %1 Tag",
+    "other": "vor %1 Tagen"
+  },
+  "chooseFolders": "Ordner zum Synchronisieren auswählen",
+  "picker.hint": "Hake die Ordner an, die auf diesem Laptop sein sollen. Klicke auf einen Ordnernamen, um hineinzuschauen.",
+  "picker.loading": "Ordner werden von OneDrive geladen…",
+  "picker.empty": "Hier sind keine Ordner.",
+  "picker.loadFailed": "Die Ordner konnten nicht von OneDrive geladen werden.",
+  "picker.applyFailed": "Die Ordnerauswahl konnte nicht gespeichert werden.",
+  "picker.back": "Zurück",
+  "picker.partial": "teilweise",
+  "picker.selected": "Synchronisiert:",
+  "picker.noneSelected": "Hake mindestens einen Ordner an. Ohne Auswahl würde OneDrive alles herunterladen.",
+  "picker.cancel": "Abbrechen",
+  "picker.apply": "Übernehmen",
+  "picker.applied": "Deine Ordner werden aktualisiert. Den Fortschritt siehst du im Terminalfenster.",
+  "state.offline": "Offline: OneDrive nicht erreichbar",
+  "state.serviceMissing": "OneDrive-Dienst nicht gefunden",
+  "picker.disclosure": "Die Ordnernamen werden mit der Anmeldung des OneDrive-Clients bei Microsoft abgefragt."
+}

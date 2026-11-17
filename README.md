@@ -85,6 +85,23 @@ Pause, resume and sync now are `systemctl --user stop/start/restart` on the clie
 omarchy plugin add https://github.com/GittyIO/omarchy-onedrive.git --enable
 ```
 
+## Remove
+
+```bash
+omarchy plugin remove gittyio.onedrive
+```
+
+This removes only the widget. The OneDrive client, your files, its `config`
+and `sync_list` stay as they are. Any `sync_list.bak.*` backups the folder
+picker made are in the client's config folder (`~/.config/onedrive`); delete
+them if you don't need them.
+
+## Update
+
+```bash
+omarchy plugin update gittyio.onedrive
+```
+
 ## Settings
 
 In the widget settings, or on the widget's entry in `~/.config/omarchy/shell.json`:

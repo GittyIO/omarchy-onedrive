@@ -146,10 +146,35 @@ Panel {
     bar: root.bar
     text: Model.stateGlyph(root.problem && root.syncState !== "notInstalled" ? "error" : root.syncState)
     foreground: root.barIconColor
+    // The cloud is wide and flat, so centring its ink still reads as sitting
+    // high next to the taller icons; lower it slightly.
+    transform: Translate { y: root.bar && root.bar.vertical ? 0 : 0.5 }
     onPressed: function(buttonCode) {
       if (buttonCode === Qt.RightButton) onedrive.refresh()
       else if (buttonCode === Qt.MiddleButton) onedrive.openFolder()
       else root.toggle()
+    }
+  }
+
+  // Pulsing dot beside the cloud while a sync is running.
+  Rectangle {
+    id: syncDot
+    readonly property bool syncing: root.syncState === "syncing" || root.syncState === "starting"
+    visible: syncing
+    width: Math.max(3, Math.round(Style.space(4)))
+    height: width
+    radius: width / 2
+    color: root.barForeground
+    // Just right of the cloud's drawn edge, on its centre line.
+    x: Math.round(button.width / 2 + button.glyphPaintedWidth / 2 + Style.space(2))
+    y: Math.round((button.height - height) / 2)
+
+    SequentialAnimation on opacity {
+      running: syncDot.visible && Style.duration(900) > 0
+      loops: Animation.Infinite
+      onRunningChanged: if (!running) syncDot.opacity = 1
+      NumberAnimation { from: 1; to: 0.2; duration: Style.duration(900) }
+      NumberAnimation { from: 0.2; to: 1; duration: Style.duration(900) }
     }
   }
 

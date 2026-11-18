@@ -44,7 +44,11 @@ Panel {
   readonly property string statusLine: onedrive.readError !== "" ? strings.t("readFailed")
     : strings.t("state." + syncState)
 
-  function timeText(key, n) { return strings.tn(key, n).arg(Commons.I18n.formatNumber(n, 0)) }
+  // "just now" has no %1, and .arg() on it logs a Qt warning on every refresh.
+  function timeText(key, n) {
+    var text = strings.tn(key, n)
+    return text.indexOf("%1") >= 0 ? text.arg(Commons.I18n.formatNumber(n, 0)) : text
+  }
 
   function say(text, isError) {
     message = text

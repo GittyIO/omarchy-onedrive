@@ -14,11 +14,12 @@ Item {
 
   // Which client setup this widget follows (plugin settings; empty = defaults).
   readonly property string confDir: String(settings && settings.configDir ? settings.configDir : "")
-  readonly property string serviceName: String(settings && settings.serviceName ? settings.serviceName : "onedrive")
+  // Stored without ".service", so "onedrive" and "onedrive.service" are the same widget.
+  readonly property string serviceName: String(settings && settings.serviceName ? settings.serviceName : "onedrive").replace(/\.service$/, "")
   readonly property string serviceScope: settings && settings.serviceScope === "system" ? "system" : "user"
   readonly property bool pickerEnabled: !(settings && settings.folderPicker === false)
   readonly property var commonArgs: ["--confdir", confDir, "--service", serviceName, "--scope", serviceScope]
-  readonly property string unit: /\.service$/.test(serviceName) ? serviceName : serviceName + ".service"
+  readonly property string unit: serviceName + ".service"
 
   property bool installed: true
   property bool running: false
@@ -137,7 +138,7 @@ Item {
     onTriggered: {
       ticks += 1
       root.refresh()
-      if (ticks >= 8) { ticks = 0; running = false; root._desired = -1 }
+      if (ticks >= 8) { ticks = 0; settleTimer.stop(); root._desired = -1 }
     }
   }
 

@@ -33,7 +33,13 @@ if [[ -n $confdir ]]; then
   client_args=(--confdir "$confdir")
 fi
 
-if ! grep -qE '^/' "$config_dir/sync_list" 2>/dev/null; then
+# The same rule as folders.py's is_folder_line: a path, not a wildcard or "//" comment.
+folder_lines() {
+  sed 's/^[[:space:]]*//; s/[[:space:]]*$//' "$config_dir/sync_list" 2>/dev/null |
+    grep -E '^/' | grep -vE '^/(\*|/)' | grep -vF '*'
+}
+
+if [[ -z $(folder_lines) ]]; then
   echo "No folders are selected, which would sync the whole OneDrive. Nothing was changed." >&2
   exit 1
 fi
@@ -41,7 +47,7 @@ fi
 echo "Updating which OneDrive folders sync to this laptop."
 echo
 echo "Folders now selected:"
-grep -E '^/' "$config_dir/sync_list" | sed 's/^/  /'
+folder_lines | sed 's/^/  /'
 echo
 echo "Stopping background sync…"
 systemctl --user stop "$service"
@@ -57,7 +63,14 @@ fi
 echo
 echo "Starting background sync again…"
 systemctl --user start "$service"
-omarchy-shell -q gittyio.onedrive refresh
+# The widget's IPC name, as Panel.qml builds it from the service name.
+service_name=${service%.service}
+if [[ $service_name == onedrive ]]; then
+  ipc_target=gittyio.onedrive
+else
+  ipc_target=gittyio.onedrive.${service_name//[^A-Za-z0-9_-]/-}
+fi
+omarchy-shell -q "$ipc_target" refresh
 
 echo
 if [[ $status == done ]]; then

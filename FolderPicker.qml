@@ -26,6 +26,10 @@ Column {
   property var original: []
   property bool loading: false
   property string error: ""
+  // A request asked for while an older one is still running (the panel was
+  // closed and reopened, say). The old one is stopped and its answer ignored.
+  property string queuedPath: ""
+  property bool currentQueued: false
 
   readonly property bool changed: JSON.stringify(selected.slice().sort()) !== JSON.stringify(original.slice().sort())
   // An empty sync_list means "sync the whole OneDrive", so never write one from here.
@@ -45,17 +49,43 @@ Column {
     original = []
     folders = []
     path = "/"
-    currentProc.command = ["python3", pluginDir + "/folders.py"].concat(commonArgs).concat(["current"])
-    currentProc.running = true
+    if (currentProc.running) {
+      currentQueued = true
+      currentProc.running = false
+    } else {
+      runCurrent()
+    }
     browse("/")
   }
 
+  function runCurrent() {
+    currentQueued = false
+    currentProc.command = ["python3", pluginDir + "/folders.py"].concat(commonArgs).concat(["current"])
+    currentProc.running = true
+  }
+
   function browse(target) {
-    if (listProc.running) return
     path = target
     folders = []
     error = ""
     loading = true
+    if (listProc.running) {
+      queuedPath = target
+      listProc.running = false
+      return
+    }
+    runList(target)
+  }
+
+  // Starts whatever was queued once the stopped process is really gone. Called
+  // from both onExited and onRunningChanged; Qt.callLater runs it once.
+  function kickQueue() {
+    if (currentQueued && !currentProc.running) runCurrent()
+    if (queuedPath !== "" && !listProc.running) runList(queuedPath)
+  }
+
+  function runList(target) {
+    queuedPath = ""
     listProc.command = ["python3", pluginDir + "/folders.py"].concat(commonArgs).concat(["list", target])
     listProc.running = true
   }
@@ -109,8 +139,10 @@ Column {
 
   Process {
     id: currentProc
+    onRunningChanged: if (!running && picker.currentQueued) Qt.callLater(picker.kickQueue)
     stdout: StdioCollector { id: currentOut; waitForEnd: true }
     onExited: function(code) {
+      if (picker.currentQueued) { Qt.callLater(picker.kickQueue); return }
       try {
         var r = JSON.parse(currentOut.text)
         if (r.ok && Array.isArray(r.folders)) {
@@ -123,8 +155,10 @@ Column {
 
   Process {
     id: listProc
+    onRunningChanged: if (!running && picker.queuedPath !== "") Qt.callLater(picker.kickQueue)
     stdout: StdioCollector { id: listOut; waitForEnd: true }
     onExited: function(code) {
+      if (picker.queuedPath !== "") { Qt.callLater(picker.kickQueue); return }
       picker.loading = false
       try {
         var r = JSON.parse(listOut.text)

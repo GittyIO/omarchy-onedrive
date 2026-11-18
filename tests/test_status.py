@@ -119,5 +119,46 @@ class DecideState(unittest.TestCase):
         self.assertEqual(last, NOW - 5)
 
 
+class UsageCache(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+        self.saved = status.CACHE_DIR
+        status.CACHE_DIR = self.tmp.name
+        self.walks = 0
+
+    def tearDown(self):
+        status.CACHE_DIR = self.saved
+        self.tmp.cleanup()
+
+    def walk(self, root):
+        self.walks += 1
+        return 10 * self.walks, 100 * self.walks
+
+    def usage(self, last_sync, now, root="/home/me/OneDrive"):
+        return status.cached_usage(root, last_sync, now=now, walk=self.walk)
+
+    def test_reused_until_it_expires(self):
+        self.assertEqual(self.usage(500, 1000), (10, 100))
+        self.assertEqual(self.usage(500, 1000 + status.USAGE_TTL_SECS - 1), (10, 100))
+        self.assertEqual(self.walks, 1)
+        self.assertEqual(self.usage(500, 1000 + status.USAGE_TTL_SECS + 1), (20, 200))
+
+    def test_newer_sync_walks_again(self):
+        self.usage(500, 1000)
+        self.assertEqual(self.usage(1001, 1002), (20, 200))
+
+    def test_other_folder_is_not_mixed_up(self):
+        self.usage(500, 1000)
+        self.usage(500, 1001, root="/home/me/OneDrive-Work")
+        self.assertEqual(self.walks, 2)
+
+    def test_broken_cache_file_is_ignored(self):
+        os.makedirs(status.CACHE_DIR, exist_ok=True)
+        with open(status.usage_cache_file("/home/me/OneDrive"), "w") as f:
+            f.write("{not json")
+        self.assertEqual(self.usage(500, 1000), (10, 100))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -92,6 +92,25 @@ def is_folder_line(line):
     return s.startswith("/") and not s.startswith(("/*", "//")) and "*" not in s
 
 
+KEEP_BACKUPS = 5
+
+
+def prune_backups(keep=KEEP_BACKUPS):
+    """Keep only the newest `keep` sync_list.bak.<time> files."""
+    folder, base = os.path.split(SYNC_LIST)
+    pattern = re.compile(re.escape(base) + r"\.bak\.(\d+)$")
+    try:
+        found = sorted(((int(m.group(1)), n) for n in os.listdir(folder or ".")
+                        if (m := pattern.match(n))), reverse=True)
+    except OSError:
+        return
+    for _, name in found[keep:]:
+        try:
+            os.remove(os.path.join(folder, name))
+        except OSError:
+            pass
+
+
 def read_sync_list():
     try:
         with open(SYNC_LIST, encoding="utf-8") as f:
@@ -220,6 +239,7 @@ def apply(paths):
         backup = f"{SYNC_LIST}.bak.{int(time.time())}"
         with open(backup, "w", encoding="utf-8") as f:
             f.write("\n".join(lines) + "\n")
+        prune_backups()
     tmp = SYNC_LIST + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         f.write("\n".join(new) + "\n")

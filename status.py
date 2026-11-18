@@ -25,6 +25,8 @@ MAX_TEXT = 300
 JOURNAL_LINES = 600
 SYNCING_STALE_SECS = 15 * 60
 MAX_WALK_FILES = 200_000
+USAGE_TTL_SECS = 5 * 60
+CACHE_DIR = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "gittyio-onedrive")
 
 CHANGE_PREFIXES = [
     ("Downloading file: ", "downloaded"),
@@ -95,6 +97,38 @@ def local_usage(root):
             count += 1
             if count >= MAX_WALK_FILES:
                 return count, size
+    return count, size
+
+
+def usage_cache_file(root):
+    safe = re.sub(r"[^A-Za-z0-9_-]", "_", root)[-120:]
+    return os.path.join(CACHE_DIR, f"usage-{safe}.json")
+
+
+def cached_usage(root, last_sync, now=None, walk=local_usage):
+    """(count, bytes) of the sync folder, walked again only after a newer sync
+    or every USAGE_TTL_SECS. The widget polls every few seconds, and walking a
+    large OneDrive that often is real disk work."""
+    now = time.time() if now is None else now
+    path = usage_cache_file(root)
+    try:
+        with open(path, encoding="utf-8") as f:
+            c = json.load(f)
+        fresh = (c.get("root") == root and 0 <= now - float(c["at"]) < USAGE_TTL_SECS
+                 and float(last_sync or 0) <= float(c["at"]))
+        if fresh:
+            return int(c["count"]), int(c["bytes"])
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    count, size = walk(root)
+    try:
+        os.makedirs(CACHE_DIR, mode=0o700, exist_ok=True)
+        tmp = f"{path}.{os.getpid()}.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"root": root, "at": now, "count": count, "bytes": size}, f)
+        os.replace(tmp, path)
+    except OSError:
+        pass
     return count, size
 
 
@@ -254,7 +288,7 @@ def main():
         if len(recent) >= max_files:
             break
 
-    count, size = local_usage(root) if os.path.isdir(root) else (0, 0)
+    count, size = cached_usage(root, last_sync) if os.path.isdir(root) else (0, 0)
     print(json.dumps({
         "installed": installed,
         "running": running,

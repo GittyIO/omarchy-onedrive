@@ -6,3 +6,4 @@ python3 -m unittest -q test_status test_folders
 node model.test.js
 python3 i18n_check.py
 bash -n ../resync.sh && echo "resync.sh syntax ok"
+bash test_resync.sh

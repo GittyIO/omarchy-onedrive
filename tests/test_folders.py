@@ -84,6 +84,18 @@ class Apply(unittest.TestCase):
         self.assertEqual(self.lines(), ["# my rules", "!/Documents/Receipts/Old", "/Documents/Receipts", "/Documents/Taxes"])
         self.assertEqual(len(self.backups()), 1)
 
+    def test_only_newest_backups_are_kept(self):
+        for t in range(1000, 1008):
+            with open(f"{self.sync_list}.bak.{t}", "w") as f:
+                f.write("old\n")
+        with open(f"{self.sync_list}.bak.notes", "w") as f:
+            f.write("not a backup\n")
+        run(folders.apply, ["/Documents/Taxes"])
+        kept = sorted(self.backups())
+        self.assertEqual(len([n for n in kept if n[len("sync_list.bak."):].isdigit()]), folders.KEEP_BACKUPS)
+        self.assertNotIn("sync_list.bak.1000", kept)
+        self.assertIn("sync_list.bak.notes", kept)
+
     def test_folders_inside_a_selected_folder_are_dropped(self):
         reply = run(folders.apply, ["/Documents/Receipts/2026", "/Documents", "/Documents/Receipts"])
         self.assertEqual(reply["folders"], ["/Documents"])

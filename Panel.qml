@@ -79,6 +79,14 @@ Panel {
     panel.loadedContent.picker.start()
   }
 
+  // /home/me/OneDrive → ~/OneDrive, but never /home/me2/… → ~2/…
+  function tildePath(p) {
+    var home = String(Quickshell.env("HOME") || "")
+    if (home === "" || home === "/") return p
+    if (p === home) return "~"
+    return p.indexOf(home + "/") === 0 ? "~" + p.slice(home.length) : p
+  }
+
   function syncNow() {
     onedrive.syncNow()
     say(strings.t("syncNowStarted"), false)
@@ -185,11 +193,14 @@ Panel {
       property alias picker: picker
       implicitHeight: column.implicitHeight
       anchors.fill: parent
-      onMoveRequested: function(dx, dy) { if (dy !== 0) root.moveCursor(dy) }
-      onActivateRequested: if (root.cursorActive) onedrive.openFile(onedrive.files[root.fileIndex])
-      onCloseRequested: root.close()
+      // While the folder picker is open, the main view's keys are off: they would
+      // restart the picker, pause sync or open a hidden file. Esc leaves the picker.
+      onMoveRequested: function(dx, dy) { if (!root.picking && dy !== 0) root.moveCursor(dy) }
+      onActivateRequested: if (!root.picking && root.cursorActive) onedrive.openFile(onedrive.files[root.fileIndex])
+      onCloseRequested: if (root.picking) picker.cancelled(); else root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
       onTextKey: function(t) {
+        if (root.picking) return
         var k = String(t).toLowerCase()
         if (k === "r") onedrive.refresh()
         else if (k === "p") onedrive.toggleRunning()
@@ -332,7 +343,7 @@ Panel {
           Column {
             width: parent.width
             spacing: Style.spacing.labelGap
-            InfoPair { label: strings.t("folder"); value: onedrive.syncDir.replace(Quickshell.env("HOME"), "~") }
+            InfoPair { label: strings.t("folder"); value: root.tildePath(onedrive.syncDir) }
             InfoPair {
               label: strings.t("stored")
               value: strings.tn("storedValue", onedrive.fileCount)

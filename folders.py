@@ -13,8 +13,10 @@ clouds (azure_ad_endpoint) are not supported by the picker.
 `list` reads the folder names straight from Microsoft Graph, read-only. It
 borrows the OneDrive client's sign-in: it redeems a copy of the client's
 refresh token for a short-lived access token, which is kept only in a private
-file under $XDG_RUNTIME_DIR (memory-backed, cleared at logout). The client's
-own token file is never written. Only fixed Microsoft HTTPS endpoints are used.
+file under $XDG_RUNTIME_DIR (memory-backed, cleared at logout); without
+$XDG_RUNTIME_DIR it is not cached at all. The client's own token file is never
+written. Only fixed Microsoft HTTPS endpoints are used and redirects are never
+followed, so the token is only sent to graph.microsoft.com.
 
 `apply` keeps comments and exclusion rules, backs up the old file, and leaves
 the --resync the client needs after a sync_list change to resync.sh.
@@ -24,7 +26,9 @@ import hashlib
 import json
 import os
 import re
+import stat
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -46,8 +50,12 @@ TIMEOUT = 15
 CONFIG_DIR = cfg.default_confdir()
 SYNC_LIST = os.path.join(CONFIG_DIR, "sync_list")
 ACCOUNT = {}
-CACHE_DIR = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "gittyio-onedrive")
-CACHE_FILE = os.path.join(CACHE_DIR, "graph-token.json")
+ALLOWED_HOSTS = ("login.microsoftonline.com", "graph.microsoft.com")
+# The token is only ever cached under $XDG_RUNTIME_DIR. Without it there is no
+# cache: a fresh token is fetched each time rather than written to a shared /tmp.
+_RUNTIME = os.environ.get("XDG_RUNTIME_DIR")
+CACHE_DIR = os.path.join(_RUNTIME, "gittyio-onedrive") if _RUNTIME and os.path.isabs(_RUNTIME) else None
+CACHE_FILE = None
 
 
 def configure(confdir):
@@ -67,7 +75,7 @@ def configure(confdir):
     }
     # One cached token per account, so two widgets never mix them up.
     key = hashlib.sha256(os.path.realpath(confdir).encode()).hexdigest()[:16]
-    CACHE_FILE = os.path.join(CACHE_DIR, f"graph-token-{key}.json")
+    CACHE_FILE = os.path.join(CACHE_DIR, f"graph-token-{key}.json") if CACHE_DIR else None
 
 
 def drive_root():
@@ -119,10 +127,33 @@ def read_sync_list():
         return []
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse every redirect, so the Authorization header never leaves the host it was meant for."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, "Redirects are not followed", headers, fp)
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def allowed_url(url):
+    try:
+        parts = urllib.parse.urlsplit(url)
+    except ValueError:
+        return False
+    return (parts.scheme == "https" and parts.hostname in ALLOWED_HOSTS
+            and parts.port in (None, 443) and not parts.username and not parts.password)
+
+
 def http(url, data=None, headers=None):
+    if not allowed_url(url):
+        raise RuntimeError("Refusing to contact an unexpected address.")
     req = urllib.request.Request(url, data=data, headers=headers or {})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+        with _OPENER.open(req, timeout=TIMEOUT) as resp:
+            if not allowed_url(resp.geturl()):
+                raise RuntimeError("Refusing a reply from an unexpected address.")
             body = resp.read(MAX_BYTES + 1)
     except urllib.error.HTTPError as err:
         body = err.read(MAX_BYTES + 1)
@@ -139,14 +170,73 @@ def http(url, data=None, headers=None):
     return json.loads(body)
 
 
-def access_token():
+def _private_dir(path):
+    """True if path is a real directory (not a link) owned by us and closed to everyone else."""
     try:
-        with open(CACHE_FILE, encoding="utf-8") as f:
-            cached = json.load(f)
-        if cached.get("expires", 0) > time.time() + 60 and isinstance(cached.get("token"), str):
-            return cached["token"]
-    except (OSError, ValueError):
+        st = os.lstat(path)
+    except OSError:
+        return False
+    return stat.S_ISDIR(st.st_mode) and st.st_uid == os.getuid() and not st.st_mode & 0o077
+
+
+def cache_dir():
+    """Create or check the private cache directory; None if it can't be trusted."""
+    if not CACHE_DIR or not _private_dir(os.path.dirname(CACHE_DIR)):
+        return None
+    try:
+        os.mkdir(CACHE_DIR, 0o700)
+    except FileExistsError:
         pass
+    except OSError:
+        return None
+    return CACHE_DIR if _private_dir(CACHE_DIR) else None
+
+
+def read_cached_token():
+    if not CACHE_FILE or not cache_dir():
+        return None
+    try:
+        fd = os.open(CACHE_FILE, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    except OSError:
+        return None
+    with os.fdopen(fd, encoding="utf-8") as f:
+        st = os.fstat(f.fileno())
+        if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid() or st.st_mode & 0o077:
+            return None
+        try:
+            cached = json.load(f)
+        except ValueError:
+            return None
+    if (isinstance(cached, dict) and isinstance(cached.get("token"), str)
+            and isinstance(cached.get("expires"), (int, float)) and cached["expires"] > time.time() + 60):
+        return cached["token"]
+    return None
+
+
+def write_cached_token(token, expires_in):
+    """Store the token in a fresh, private, randomly named file, then move it into place."""
+    folder = cache_dir() if CACHE_FILE else None
+    if not folder:
+        return
+    try:
+        fd, tmp = tempfile.mkstemp(prefix=".graph-token-", dir=folder)  # O_EXCL, mode 0600
+    except OSError:
+        return
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump({"token": token, "expires": time.time() + expires_in}, f)
+        os.replace(tmp, CACHE_FILE)
+    except OSError:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def access_token():
+    cached = read_cached_token()
+    if cached:
+        return cached
 
     try:
         with open(os.path.join(CONFIG_DIR, "refresh_token"), encoding="utf-8") as f:
@@ -172,12 +262,11 @@ def access_token():
             continue
         token = reply.get("access_token")
         if isinstance(token, str) and token:
-            os.makedirs(CACHE_DIR, mode=0o700, exist_ok=True)
-            os.chmod(CACHE_DIR, 0o700)
-            fd = os.open(CACHE_FILE + ".tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-            with os.fdopen(fd, "w") as f:
-                json.dump({"token": token, "expires": time.time() + int(reply.get("expires_in", 3000))}, f)
-            os.replace(CACHE_FILE + ".tmp", CACHE_FILE)
+            try:
+                expires_in = max(0, min(int(reply.get("expires_in", 3000)), 24 * 3600))
+            except (TypeError, ValueError):
+                expires_in = 0
+            write_cached_token(token, expires_in)
             return token
     raise RuntimeError(f"Couldn't sign in to OneDrive ({last})")
 
@@ -204,7 +293,7 @@ def list_folders(path):
             count = item.get("folder", {}).get("childCount", 0)
             folders.append({"name": name[:255], "children": count if isinstance(count, int) else 0})
         url = page.get("@odata.nextLink")
-        if not isinstance(url, str) or not url.startswith("https://graph.microsoft.com/"):
+        if not isinstance(url, str) or not allowed_url(url) or urllib.parse.urlsplit(url).hostname != "graph.microsoft.com":
             break
     folders.sort(key=lambda f: f["name"].casefold())
     print(json.dumps({"ok": True, "path": path, "folders": folders}))

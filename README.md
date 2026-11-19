@@ -56,8 +56,11 @@ only**, read-only, using the client's existing sign-in:
   least-privileged scope Microsoft accepts (`Files.Read` first).
 - **It never writes the client's token file.** The short-lived access token is
   kept in a file only you can read under `$XDG_RUNTIME_DIR` (memory-backed,
-  cleared at logout).
-- It only contacts `login.microsoftonline.com` and `graph.microsoft.com`, over HTTPS.
+  cleared at logout). The cache folder and file must be owned by you, closed to
+  everyone else and not symlinks, or the token isn't cached. Without
+  `$XDG_RUNTIME_DIR` it isn't cached at all; it never goes to `/tmp`.
+- It only contacts `login.microsoftonline.com` and `graph.microsoft.com`, over
+  HTTPS, and never follows redirects, so the token can't be forwarded elsewhere.
 - It respects `application_id`, `azure_tenant_id` and `drive_id` from the
   client's config, so business accounts and SharePoint libraries work.
   National clouds (`azure_ad_endpoint`) are not supported by the picker.

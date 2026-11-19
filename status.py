@@ -12,8 +12,10 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime
 
@@ -26,7 +28,9 @@ JOURNAL_LINES = 600
 SYNCING_STALE_SECS = 15 * 60
 MAX_WALK_FILES = 200_000
 USAGE_TTL_SECS = 5 * 60
-CACHE_DIR = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "gittyio-onedrive")
+# Cached only under $XDG_RUNTIME_DIR, never in a shared /tmp; without it, no cache.
+_RUNTIME = os.environ.get("XDG_RUNTIME_DIR")
+CACHE_DIR = os.path.join(_RUNTIME, "gittyio-onedrive") if _RUNTIME and os.path.isabs(_RUNTIME) else None
 
 CHANGE_PREFIXES = [
     ("Downloading file: ", "downloaded"),
@@ -110,9 +114,11 @@ def cached_usage(root, last_sync, now=None, walk=local_usage):
     or every USAGE_TTL_SECS. The widget polls every few seconds, and walking a
     large OneDrive that often is real disk work."""
     now = time.time() if now is None else now
+    if not CACHE_DIR:
+        return walk(root)
     path = usage_cache_file(root)
     try:
-        with open(path, encoding="utf-8") as f:
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC), encoding="utf-8") as f:
             c = json.load(f)
         fresh = (c.get("root") == root and 0 <= now - float(c["at"]) < USAGE_TTL_SECS
                  and float(last_sync or 0) <= float(c["at"]))
@@ -123,10 +129,16 @@ def cached_usage(root, last_sync, now=None, walk=local_usage):
     count, size = walk(root)
     try:
         os.makedirs(CACHE_DIR, mode=0o700, exist_ok=True)
-        tmp = f"{path}.{os.getpid()}.tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"root": root, "at": now, "count": count, "bytes": size}, f)
-        os.replace(tmp, path)
+        st = os.lstat(CACHE_DIR)
+        if not stat.S_ISDIR(st.st_mode) or st.st_uid != os.getuid() or st.st_mode & 0o077:
+            return count, size
+        fd, tmp = tempfile.mkstemp(prefix=".usage-", dir=CACHE_DIR)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump({"root": root, "at": now, "count": count, "bytes": size}, f)
+            os.replace(tmp, path)
+        except OSError:
+            os.unlink(tmp)
     except OSError:
         pass
     return count, size

@@ -159,6 +159,19 @@ class UsageCache(unittest.TestCase):
             f.write("{not json")
         self.assertEqual(self.usage(500, 1000), (10, 100))
 
+    def test_no_cache_without_runtime_dir(self):
+        status.CACHE_DIR = None
+        self.usage(500, 1000)
+        self.usage(500, 1001)
+        self.assertEqual(self.walks, 2)
+
+    def test_symlinked_cache_file_is_not_read(self):
+        planted = os.path.join(self.tmp.name, "planted.json")
+        with open(planted, "w") as f:
+            f.write('{"root": "/home/me/OneDrive", "at": 1000, "count": 999, "bytes": 999}')
+        os.symlink(planted, status.usage_cache_file("/home/me/OneDrive"))
+        self.assertEqual(self.usage(500, 1000), (10, 100))
+
 
 if __name__ == "__main__":
     unittest.main()

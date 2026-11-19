@@ -139,5 +139,76 @@ class Account(unittest.TestCase):
         self.assertIn("global cloud", str(ctx.exception))
 
 
+class Network(unittest.TestCase):
+    def test_only_microsoft_https_hosts(self):
+        self.assertTrue(folders.allowed_url("https://graph.microsoft.com/v1.0/me/drive/root/children"))
+        self.assertTrue(folders.allowed_url("https://login.microsoftonline.com/common/oauth2/v2.0/token"))
+        for url in ["http://graph.microsoft.com/v1.0", "https://graph.microsoft.com.evil.example/",
+                    "https://evil.example/?https://graph.microsoft.com/", "https://user@graph.microsoft.com/",
+                    "https://graph.microsoft.com:8443/", "file:///etc/passwd"]:
+            self.assertFalse(folders.allowed_url(url), url)
+        with self.assertRaises(RuntimeError):
+            folders.http("https://evil.example/")
+
+    def test_redirects_are_refused(self):
+        handler = folders._NoRedirect()
+        req = folders.urllib.request.Request("https://graph.microsoft.com/v1.0/x",
+                                             headers={"Authorization": "Bearer secret"})
+        with self.assertRaises(folders.urllib.error.HTTPError) as ctx:
+            handler.redirect_request(req, None, 302, "Found", {}, "https://evil.example/")
+        ctx.exception.close()
+
+
+class TokenCache(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        os.chmod(self.tmp.name, 0o700)
+        saved = (folders.CACHE_DIR, folders.CACHE_FILE)
+        self.addCleanup(lambda: setattr(folders, "CACHE_DIR", saved[0]) or setattr(folders, "CACHE_FILE", saved[1]))
+        folders.CACHE_DIR = os.path.join(self.tmp.name, "gittyio-onedrive")
+        folders.CACHE_FILE = os.path.join(folders.CACHE_DIR, "graph-token-test.json")
+
+    def test_round_trip_is_private(self):
+        folders.write_cached_token("tok", 3000)
+        self.assertEqual(folders.read_cached_token(), "tok")
+        self.assertEqual(os.stat(folders.CACHE_DIR).st_mode & 0o777, 0o700)
+        self.assertEqual(os.stat(folders.CACHE_FILE).st_mode & 0o777, 0o600)
+        self.assertEqual(os.listdir(folders.CACHE_DIR), ["graph-token-test.json"])
+
+    def test_no_cache_without_runtime_dir(self):
+        folders.CACHE_DIR = folders.CACHE_FILE = None
+        folders.write_cached_token("tok", 3000)
+        self.assertIsNone(folders.read_cached_token())
+
+    def test_symlinked_cache_dir_is_refused(self):
+        target = os.path.join(self.tmp.name, "elsewhere")
+        os.mkdir(target, 0o700)
+        os.symlink(target, folders.CACHE_DIR)
+        folders.write_cached_token("tok", 3000)
+        self.assertEqual(os.listdir(target), [])
+        self.assertIsNone(folders.read_cached_token())
+
+    def test_open_cache_dir_is_refused(self):
+        os.mkdir(folders.CACHE_DIR, 0o700)
+        os.chmod(folders.CACHE_DIR, 0o777)
+        folders.write_cached_token("tok", 3000)
+        self.assertEqual(os.listdir(folders.CACHE_DIR), [])
+
+    def test_symlinked_cache_file_is_not_read(self):
+        os.mkdir(folders.CACHE_DIR, 0o700)
+        planted = os.path.join(self.tmp.name, "planted.json")
+        with open(planted, "w") as f:
+            json.dump({"token": "evil", "expires": 9e9}, f)
+        os.chmod(planted, 0o600)
+        os.symlink(planted, folders.CACHE_FILE)
+        self.assertIsNone(folders.read_cached_token())
+
+    def test_readable_cache_file_is_not_trusted(self):
+        folders.write_cached_token("tok", 3000)
+        os.chmod(folders.CACHE_FILE, 0o644)
+        self.assertIsNone(folders.read_cached_token())
+
+
 if __name__ == "__main__":
     unittest.main()

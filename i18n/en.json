@@ -52,11 +52,15 @@
   "picker.back": "Back",
   "picker.partial": "some inside",
   "picker.selected": "Syncing:",
-  "picker.noneSelected": "Tick at least one folder. With none ticked, OneDrive would download everything.",
+  "picker.noneSelected": "Tick at least one folder, or choose to sync your entire OneDrive.",
   "picker.cancel": "Cancel",
   "picker.apply": "Apply",
   "picker.applied": "Updating your folders. Follow the progress in the terminal window.",
   "state.offline": "Offline: can't reach OneDrive",
   "state.serviceMissing": "OneDrive service not found",
-  "picker.disclosure": "Folder names are read from Microsoft using the OneDrive client's sign-in."
+  "picker.disclosure": "Folder names are read from Microsoft using the OneDrive client's sign-in.",
+  "syncing": "Syncing",
+  "syncing.all": "Entire OneDrive",
+  "picker.syncAll": "Sync my entire OneDrive",
+  "picker.allSelected": "Everything in your OneDrive syncs to this computer. Folders moved, renamed or deleted online change here too."
 }

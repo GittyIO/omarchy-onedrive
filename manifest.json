@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "gittyio.onedrive",
   "name": "OneDrive",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "author": "GittyIO",
   "license": "MIT",
   "description": "Sync status, recent file changes, pause/resume and a folder picker for the OneDrive Client for Linux (abraunegg) in the Omarchy bar.",

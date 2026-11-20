@@ -34,6 +34,7 @@ function parseStatus(raw) {
       syncDir: clip(data.syncDir, 1000),
       folderExists: data.folderExists === true,
       folders: folders,
+      syncAll: data.syncAll === true,
       fileCount: toInt(data.fileCount),
       bytes: toInt(data.bytes),
       files: files,

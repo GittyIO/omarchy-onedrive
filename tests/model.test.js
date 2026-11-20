@@ -20,6 +20,12 @@ test("rejects non-JSON", () => {
   assert.strictEqual(Model.parseStatus("").ok, false)
 })
 
+test("whole-drive flag must be a real true", () => {
+  assert.strictEqual(Model.parseStatus('{"syncAll":true}').syncAll, true)
+  assert.strictEqual(Model.parseStatus('{"syncAll":"yes"}').syncAll, false)
+  assert.strictEqual(Model.parseStatus('{}').syncAll, false)
+})
+
 test("unknown states fall back to starting", () => {
   assert.strictEqual(Model.parseStatus('{"state":"<b>pwned</b>"}').state, "starting")
   assert.strictEqual(Model.parseStatus('{"state":"offline"}').state, "offline")

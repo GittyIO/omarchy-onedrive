@@ -52,11 +52,15 @@
   "picker.back": "Zurück",
   "picker.partial": "teilweise",
   "picker.selected": "Synchronisiert:",
-  "picker.noneSelected": "Hake mindestens einen Ordner an. Ohne Auswahl würde OneDrive alles herunterladen.",
+  "picker.noneSelected": "Wähle mindestens einen Ordner aus oder synchronisiere dein gesamtes OneDrive.",
   "picker.cancel": "Abbrechen",
   "picker.apply": "Übernehmen",
   "picker.applied": "Deine Ordner werden aktualisiert. Den Fortschritt siehst du im Terminalfenster.",
   "state.offline": "Offline: OneDrive nicht erreichbar",
   "state.serviceMissing": "OneDrive-Dienst nicht gefunden",
-  "picker.disclosure": "Die Ordnernamen werden mit der Anmeldung des OneDrive-Clients bei Microsoft abgefragt."
+  "picker.disclosure": "Die Ordnernamen werden mit der Anmeldung des OneDrive-Clients bei Microsoft abgefragt.",
+  "syncing": "Synchronisiert",
+  "syncing.all": "Gesamtes OneDrive",
+  "picker.syncAll": "Mein gesamtes OneDrive synchronisieren",
+  "picker.allSelected": "Alles in deinem OneDrive wird auf diesen Computer synchronisiert. Online verschobene, umbenannte oder gelöschte Ordner ändern sich auch hier."
 }

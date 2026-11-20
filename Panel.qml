@@ -349,6 +349,11 @@ Panel {
             spacing: Style.spacing.labelGap
             InfoPair { label: strings.t("folder"); value: root.tildePath(onedrive.syncDir) }
             InfoPair {
+              label: strings.t("syncing")
+              value: onedrive.syncAll ? strings.t("syncing.all")
+                : onedrive.folders.length ? onedrive.folders.join(", ") : "—"
+            }
+            InfoPair {
               label: strings.t("stored")
               value: strings.tn("storedValue", onedrive.fileCount)
                 .arg(Commons.I18n.formatNumber(onedrive.fileCount, 0))

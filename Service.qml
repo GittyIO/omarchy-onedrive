@@ -29,6 +29,8 @@ Item {
   property string syncDir: Quickshell.env("HOME") + "/OneDrive"
   property bool folderExists: true
   property int fileCount: 0
+  property var folders: []
+  property bool syncAll: false
   property double bytes: 0
   property var files: []
   property bool canControl: true
@@ -58,6 +60,7 @@ Item {
     syncState = "synced"; lastSync = now - 120; lastError = ""
     syncDir = Quickshell.env("HOME") + "/OneDrive"; folderExists = true
     fileCount = 1284; bytes = 2468000000
+    folders = []; syncAll = true
     files = [
       { name: "Quarterly report.xlsx", folder: "Work/Reports", path: "/demo", kind: "uploaded", failed: false, time: now - 140 },
       { name: "Lease agreement.pdf", folder: "Documents/Home", path: "/demo", kind: "downloaded", failed: false, time: now - 900 },
@@ -86,6 +89,8 @@ Item {
     folderExists = s.folderExists
     fileCount = s.fileCount
     bytes = s.bytes
+    folders = s.folders
+    syncAll = s.syncAll
     files = s.files
     canControl = s.canControl
     loaded = true

@@ -6,9 +6,10 @@ import qs.Commons
 import qs.Ui
 import "Model.js" as Model
 
-// Browse OneDrive folders and tick the ones that sync to this laptop.
-// Folder names come from folders.py (read-only Microsoft Graph); "Apply"
-// rewrites sync_list through folders.py and runs resync.sh in a terminal.
+// Browse OneDrive folders and tick the ones that sync to this computer, or sync
+// the entire OneDrive. Folder names come from folders.py (read-only Microsoft
+// Graph); "Apply" rewrites or removes sync_list through folders.py and runs
+// resync.sh in a terminal.
 Column {
   id: picker
 
@@ -24,6 +25,9 @@ Column {
   property var folders: []
   property var selected: []
   property var original: []
+  // Whole-drive mode: no sync_list at all. Chosen explicitly, never by unticking everything.
+  property bool syncAll: false
+  property bool originalAll: false
   property bool loading: false
   property string error: ""
   // A request asked for while an older one is still running (the panel was
@@ -31,9 +35,10 @@ Column {
   property string queuedPath: ""
   property bool currentQueued: false
 
-  readonly property bool changed: JSON.stringify(selected.slice().sort()) !== JSON.stringify(original.slice().sort())
-  // An empty sync_list means "sync the whole OneDrive", so never write one from here.
-  readonly property bool canApply: changed && selected.length > 0
+  readonly property bool changed: syncAll !== originalAll
+    || (!syncAll && JSON.stringify(selected.slice().sort()) !== JSON.stringify(original.slice().sort()))
+  // An empty folder list is never written: the whole drive only syncs when syncAll is chosen.
+  readonly property bool canApply: changed && (syncAll || selected.length > 0)
   readonly property bool busy: loading || applyProc.running
 
   signal finished(string message)
@@ -47,6 +52,8 @@ Column {
     error = ""
     selected = []
     original = []
+    syncAll = false
+    originalAll = false
     folders = []
     path = "/"
     if (currentProc.running) {
@@ -101,6 +108,7 @@ Column {
   function full(name) { return path === "/" ? "/" + name : path + "/" + name }
 
   function stateOf(p) {
+    if (syncAll) return "inherited"
     for (var i = 0; i < selected.length; i++) {
       var s = selected[i]
       if (s === p) return "on"
@@ -127,7 +135,9 @@ Column {
   function apply() {
     if (!canApply || applyProc.running) return
     error = ""
-    applyProc.command = ["python3", pluginDir + "/folders.py"].concat(commonArgs).concat(["apply"]).concat(selected)
+    applyProc.wholeDrive = syncAll
+    applyProc.command = ["python3", pluginDir + "/folders.py"].concat(commonArgs)
+      .concat(syncAll ? ["apply-all"] : ["apply"].concat(selected))
     applyProc.running = true
   }
 
@@ -148,6 +158,8 @@ Column {
         if (r.ok && Array.isArray(r.folders)) {
           picker.selected = r.folders.slice(0, 200).map(String)
           picker.original = picker.selected.slice()
+          picker.syncAll = r.all === true
+          picker.originalAll = picker.syncAll
         }
       } catch (e) {}
     }
@@ -174,6 +186,7 @@ Column {
 
   Process {
     id: applyProc
+    property bool wholeDrive: false
     stdout: StdioCollector { id: applyOut; waitForEnd: true }
     onExited: function(code) {
       var r = null
@@ -182,6 +195,7 @@ Column {
       if (r.changed) {
         // The presentation wrapper takes one shell string, so quote every word.
         var words = [picker.pluginDir + "/resync.sh"].concat(picker.commonArgs)
+          .concat(applyProc.wholeDrive ? ["--all"] : [])
         Quickshell.execDetached(["omarchy-launch-floating-terminal-with-presentation",
           "bash " + words.map(picker.shellQuote).join(" ")])
         picker.finished(picker.t("picker.applied"))
@@ -228,13 +242,61 @@ Column {
     wrapMode: Text.WordWrap
   }
 
+  // Sync everything instead of chosen folders.
+  CursorSurface {
+    id: allRow
+    width: parent.width
+    foreground: picker.foreground
+    hasCursor: allMouse.containsMouse
+    implicitHeight: allLayout.implicitHeight + Style.space(10)
+
+    MouseArea {
+      id: allMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: picker.syncAll = !picker.syncAll
+    }
+
+    RowLayout {
+      id: allLayout
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      anchors.leftMargin: Style.space(6)
+      anchors.rightMargin: Style.space(8)
+      spacing: Style.space(8)
+
+      Text {
+        textFormat: Text.PlainText
+        text: picker.checkGlyph(picker.syncAll ? "on" : "off")
+        color: picker.foreground
+        font.family: picker.fontFamily
+        font.pixelSize: Style.font.icon * 1.15
+        Layout.alignment: Qt.AlignVCenter
+      }
+
+      Text {
+        Layout.fillWidth: true
+        textFormat: Text.PlainText
+        text: picker.t("picker.syncAll")
+        color: picker.foreground
+        font.family: picker.fontFamily
+        font.pixelSize: Style.font.body
+        font.bold: true
+        elide: Text.ElideRight
+      }
+    }
+  }
+
   Text {
     width: parent.width
     textFormat: Text.PlainText
-    text: picker.selected.length
+    text: picker.syncAll ? picker.t("picker.allSelected")
+      : picker.selected.length
       ? picker.t("picker.selected") + " " + picker.selected.map(function(p) { return p.split("/").pop() }).join(", ")
       : picker.t("picker.noneSelected")
-    color: picker.selected.length ? picker.dim : picker.urgent
+    color: picker.syncAll || picker.selected.length ? picker.dim : picker.urgent
     font.family: picker.fontFamily
     font.pixelSize: Style.font.caption
     wrapMode: Text.WordWrap

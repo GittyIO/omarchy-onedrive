@@ -4,6 +4,7 @@
   folders.py [opts] current          Print the folders listed in sync_list.
   folders.py [opts] list <path>      Print the subfolders of an OneDrive folder ("/" = top).
   folders.py [opts] apply <path>...  Rewrite sync_list's folder lines to exactly <path>...
+  folders.py [opts] apply-all        Sync the entire OneDrive: back up sync_list and remove it.
 
 [opts] are --confdir/--service/--scope, see onedrive_config.py. The account
 details (application_id, azure_tenant_id, drive_id) come from the client's
@@ -20,6 +21,8 @@ followed, so the token is only sent to graph.microsoft.com.
 
 `apply` keeps comments and exclusion rules, backs up the old file, and leaves
 the --resync the client needs after a sync_list change to resync.sh.
+`apply-all` only removes a sync_list made of folder lines and comments; one
+with wildcards or exclusion rules is left for the user to edit by hand.
 """
 
 import hashlib
@@ -98,6 +101,16 @@ def valid_path(path):
 def is_folder_line(line):
     s = line.strip()
     return s.startswith("/") and not s.startswith(("/*", "//")) and "*" not in s
+
+
+def is_comment_line(line):
+    s = line.strip()
+    return not s or s.startswith(("#", ";"))
+
+
+def syncs_everything(lines):
+    """No sync_list rules at all means the client syncs the whole OneDrive."""
+    return all(is_comment_line(l) for l in lines)
 
 
 KEEP_BACKUPS = 5
@@ -300,8 +313,31 @@ def list_folders(path):
 
 
 def current():
-    paths = [l.strip() for l in read_sync_list() if is_folder_line(l)]
-    print(json.dumps({"ok": True, "folders": paths}))
+    lines = read_sync_list()
+    paths = [l.strip() for l in lines if is_folder_line(l)]
+    print(json.dumps({"ok": True, "folders": paths, "all": syncs_everything(lines)}))
+
+
+def backup_sync_list(lines):
+    backup = f"{SYNC_LIST}.bak.{int(time.time())}"
+    with open(backup, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    prune_backups()
+
+
+def apply_all():
+    lines = read_sync_list()
+    if syncs_everything(lines):
+        if lines:  # only comments left: nothing to keep, and the client ignores it either way
+            backup_sync_list(lines)
+            os.remove(SYNC_LIST)
+        print(json.dumps({"ok": True, "changed": bool(lines), "all": True}))
+        return
+    if any(not is_comment_line(l) and not is_folder_line(l) for l in lines):
+        fail("Your sync_list has wildcard or exclusion rules, so it wasn't removed. Edit it by hand to sync everything.")
+    backup_sync_list(lines)
+    os.remove(SYNC_LIST)
+    print(json.dumps({"ok": True, "changed": True, "all": True}))
 
 
 def apply(paths):
@@ -325,10 +361,7 @@ def apply(paths):
         print(json.dumps({"ok": True, "changed": False, "folders": clean}))
         return
     if lines:
-        backup = f"{SYNC_LIST}.bak.{int(time.time())}"
-        with open(backup, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
-        prune_backups()
+        backup_sync_list(lines)
     tmp = SYNC_LIST + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         f.write("\n".join(new) + "\n")
@@ -338,7 +371,7 @@ def apply(paths):
 
 def main():
     parser = cfg.parser("OneDrive folder picker backend")
-    parser.add_argument("command", choices=["current", "list", "apply"])
+    parser.add_argument("command", choices=["current", "list", "apply", "apply-all"])
     parser.add_argument("paths", nargs="*")
     args = parser.parse_args()
     try:
@@ -353,6 +386,8 @@ def main():
             list_folders(args.paths[0])
         elif args.command == "apply":
             apply(args.paths)
+        elif args.command == "apply-all" and not args.paths:
+            apply_all()
         else:
             fail("Unknown command.")
     except RuntimeError as err:

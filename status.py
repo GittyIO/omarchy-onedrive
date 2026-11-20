@@ -74,6 +74,17 @@ def parse_time(value):
         return 0
 
 
+def syncs_everything(confdir):
+    """True when sync_list is missing or holds no rules: the client syncs the whole OneDrive."""
+    try:
+        with open(os.path.join(confdir, "sync_list"), encoding="utf-8") as f:
+            return all(not line.strip() or line.strip().startswith(("#", ";")) for line in f)
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+
+
 def synced_folders(confdir):
     folders = []
     try:
@@ -312,6 +323,7 @@ def main():
         "syncDir": root,
         "folderExists": os.path.isdir(root),
         "folders": synced_folders(confdir),
+        "syncAll": syncs_everything(confdir),
         "fileCount": count,
         "bytes": size,
         "files": recent,

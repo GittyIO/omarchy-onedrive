@@ -103,6 +103,46 @@ class Apply(unittest.TestCase):
     def test_current_lists_only_folder_lines(self):
         reply = run(folders.current)
         self.assertEqual(reply["folders"], ["/Documents/Receipts", "/Documents/Photos"])
+        self.assertFalse(reply["all"])
+
+
+class WholeDrive(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        folders.configure(self.tmp.name)
+
+    def write(self, text):
+        with open(folders.SYNC_LIST, "w") as f:
+            f.write(text)
+
+    def backups(self):
+        return [n for n in os.listdir(self.tmp.name) if n.startswith("sync_list.bak.")]
+
+    def test_folder_list_is_backed_up_and_removed(self):
+        self.write("# mine\n/My Files\n")
+        reply = run(folders.apply_all)
+        self.assertTrue(reply["ok"] and reply["changed"] and reply["all"])
+        self.assertFalse(os.path.exists(folders.SYNC_LIST))
+        self.assertEqual(len(self.backups()), 1)
+        self.assertTrue(run(folders.current)["all"])
+
+    def test_already_everything_is_unchanged(self):
+        reply = run(folders.apply_all)
+        self.assertFalse(reply["changed"])
+        self.assertTrue(run(folders.current)["all"])
+
+    def test_rules_are_not_thrown_away(self):
+        for text in ["/Documents\n!/Documents/Private\n", "/Documents\n*.iso\n", "-/Temp\n"]:
+            self.write(text)
+            reply = run(folders.apply_all)
+            self.assertFalse(reply["ok"], text)
+            self.assertTrue(os.path.exists(folders.SYNC_LIST), text)
+
+    def test_back_to_selected_folders(self):
+        reply = run(folders.apply, ["/My Files"])
+        self.assertTrue(reply["changed"])
+        self.assertFalse(run(folders.current)["all"])
 
 
 class Account(unittest.TestCase):

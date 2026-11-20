@@ -6,7 +6,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin" "$tmp/conf"
-for cmd in onedrive systemctl omarchy-shell; do
+for cmd in onedrive systemctl omarchy-shell notify-send; do
   printf '#!/bin/bash\necho "%s $*" >> "%s/calls"\n' "$cmd" "$tmp" > "$tmp/bin/$cmd"
   chmod +x "$tmp/bin/$cmd"
 done
@@ -29,6 +29,22 @@ check "second account widget refreshed" 'grep -qx "omarchy-shell -q gittyio.oned
 
 run --service onedrive.service
 check "onedrive.service is the default widget" 'grep -qx "omarchy-shell -q gittyio.onedrive refresh" "$tmp/calls"'
+
+printf '/Documents\n' > "$tmp/conf/sync_list"
+run --all
+check "--all refused while sync_list has rules" '! grep -q "onedrive " "$tmp/calls"'
+
+rm "$tmp/conf/sync_list"
+run
+check "missing sync_list refused without --all" '! grep -q "onedrive " "$tmp/calls"'
+
+run --all
+check "--all resyncs with no sync_list" 'grep -q "onedrive --confdir .* --resync" "$tmp/calls"'
+check "--all restarts the service" 'grep -q "systemctl --user start onedrive.service" "$tmp/calls"'
+
+printf '# just a comment\n\n' > "$tmp/conf/sync_list"
+run --all
+check "--all accepts a comment-only sync_list" 'grep -q "onedrive --confdir .* --resync" "$tmp/calls"'
 
 ((fail)) && exit 1
 echo "resync.sh checks ok"

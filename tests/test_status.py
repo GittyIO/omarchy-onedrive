@@ -119,6 +119,25 @@ class DecideState(unittest.TestCase):
         self.assertEqual(last, NOW - 5)
 
 
+class SyncScope(unittest.TestCase):
+    def check(self, text, expected):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            if text is not None:
+                with open(os.path.join(d, "sync_list"), "w") as f:
+                    f.write(text)
+            self.assertEqual(status.syncs_everything(d), expected, repr(text))
+
+    def test_whole_drive_without_rules(self):
+        self.check(None, True)
+        self.check("", True)
+        self.check("# only a comment\n\n; another\n", True)
+
+    def test_selected_folders(self):
+        self.check("/My Files\n", False)
+        self.check("!/Private\n", False)
+
+
 class UsageCache(unittest.TestCase):
     def setUp(self):
         import tempfile

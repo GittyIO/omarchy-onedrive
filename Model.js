@@ -28,6 +28,7 @@ function parseStatus(raw) {
       ok: true,
       installed: data.installed === true,
       running: data.running === true,
+      enabled: data.enabled === true,
       state: state,
       lastSync: toInt(data.lastSync),
       lastError: clip(data.lastError, 300),

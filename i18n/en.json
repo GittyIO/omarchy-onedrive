@@ -62,5 +62,9 @@
   "syncing": "Syncing",
   "syncing.all": "Entire OneDrive",
   "picker.syncAll": "Sync my entire OneDrive",
-  "picker.allSelected": "Everything in your OneDrive syncs to this computer. Folders moved, renamed or deleted online change here too."
+  "picker.allSelected": "Everything in your OneDrive syncs to this computer. Folders moved, renamed or deleted online change here too.",
+  "startAtLogin": "Start syncing at login",
+  "startAtLogin.on": "OneDrive starts syncing when you log in. Click to stop that.",
+  "startAtLogin.off": "Click to make OneDrive start syncing when you log in.",
+  "startAtLogin.hint": "OneDrive won't start by itself after a restart. It stays paused until you resume it."
 }

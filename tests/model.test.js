@@ -26,6 +26,11 @@ test("whole-drive flag must be a real true", () => {
   assert.strictEqual(Model.parseStatus('{}').syncAll, false)
 })
 
+test("start-at-login flag must be a real true", () => {
+  assert.strictEqual(Model.parseStatus('{"enabled":true}').enabled, true)
+  assert.strictEqual(Model.parseStatus('{"enabled":1}').enabled, false)
+})
+
 test("unknown states fall back to starting", () => {
   assert.strictEqual(Model.parseStatus('{"state":"<b>pwned</b>"}').state, "starting")
   assert.strictEqual(Model.parseStatus('{"state":"offline"}').state, "offline")

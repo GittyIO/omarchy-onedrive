@@ -23,6 +23,10 @@ Item {
 
   property bool installed: true
   property bool running: false
+  // Starts at login (the unit is enabled). -1/0/1 shows a pending switch right away.
+  property bool loginEnabled: false
+  property int _desiredEnabled: -1
+  readonly property bool startsAtLogin: _desiredEnabled === -1 ? loginEnabled : (_desiredEnabled === 1)
   property string syncState: "starting"
   property int lastSync: 0
   property string lastError: ""
@@ -56,7 +60,7 @@ Item {
     if (!on) { refresh(); return }
     var now = Math.floor(Date.now() / 1000)
     _desired = -1
-    installed = true; running = true; canControl = true; readError = ""
+    installed = true; running = true; loginEnabled = true; canControl = true; readError = ""
     syncState = "synced"; lastSync = now - 120; lastError = ""
     syncDir = Quickshell.env("HOME") + "/OneDrive"; folderExists = true
     fileCount = 1284; bytes = 2468000000
@@ -82,6 +86,8 @@ Item {
     readError = ""
     installed = s.installed
     running = s.running
+    loginEnabled = s.enabled
+    if (_desiredEnabled !== -1 && loginEnabled === (_desiredEnabled === 1)) _desiredEnabled = -1
     syncState = s.state
     lastSync = s.lastSync
     lastError = s.lastError
@@ -102,6 +108,15 @@ Item {
     _desired = desired
     actionError = ""
     controlProcess.command = ["systemctl", "--user", verb, unit]
+    controlProcess.running = true
+  }
+
+  // Only changes whether the service starts at login; it doesn't start or stop it now.
+  function setStartAtLogin(on) {
+    if (!installed || !canControl || controlProcess.running) return
+    _desiredEnabled = on ? 1 : 0
+    actionError = ""
+    controlProcess.command = ["systemctl", "--user", on ? "enable" : "disable", unit]
     controlProcess.running = true
   }
 
@@ -143,7 +158,7 @@ Item {
     onTriggered: {
       ticks += 1
       root.refresh()
-      if (ticks >= 8) { ticks = 0; settleTimer.stop(); root._desired = -1 }
+      if (ticks >= 8) { ticks = 0; settleTimer.stop(); root._desired = -1; root._desiredEnabled = -1 }
     }
   }
 
@@ -162,6 +177,7 @@ Item {
     onExited: function(exitCode) {
       if (exitCode !== 0) {
         root._desired = -1
+        root._desiredEnabled = -1
         root.actionError = Model.clip(controlErr.text || ("exit " + exitCode), 200)
       }
       settleTimer.ticks = 0

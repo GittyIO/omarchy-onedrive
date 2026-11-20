@@ -347,6 +347,45 @@ Panel {
           Column {
             width: parent.width
             spacing: Style.spacing.labelGap
+            RowLayout {
+              width: parent.width
+              spacing: Style.space(8)
+              visible: onedrive.installed && onedrive.canControl
+              Text {
+                Layout.fillWidth: true
+                textFormat: Text.PlainText
+                text: strings.t("startAtLogin")
+                color: root.foreground
+                opacity: 0.6
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+              }
+              ToggleSwitch {
+                id: loginSwitch
+                checked: onedrive.startsAtLogin
+                busy: onedrive.busy
+                hasCursor: false
+                cursorRing: false
+                foreground: root.foreground
+                onToggled: onedrive.setStartAtLogin(!onedrive.startsAtLogin)
+
+                PanelToolTip {
+                  visible: loginSwitch.containsMouse
+                  text: onedrive.startsAtLogin ? strings.t("startAtLogin.on") : strings.t("startAtLogin.off")
+                  fontFamily: root.fontFamily
+                }
+              }
+            }
+            Text {
+              visible: onedrive.installed && onedrive.canControl && onedrive.loaded && !onedrive.startsAtLogin
+              width: parent.width
+              textFormat: Text.PlainText
+              text: strings.t("startAtLogin.hint")
+              color: root.syncState === "paused" ? root.urgent : root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              wrapMode: Text.WordWrap
+            }
             InfoPair { label: strings.t("folder"); value: root.tildePath(onedrive.syncDir) }
             InfoPair {
               label: strings.t("syncing")

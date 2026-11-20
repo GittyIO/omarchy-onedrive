@@ -62,5 +62,9 @@
   "syncing": "Synchronisiert",
   "syncing.all": "Gesamtes OneDrive",
   "picker.syncAll": "Mein gesamtes OneDrive synchronisieren",
-  "picker.allSelected": "Alles in deinem OneDrive wird auf diesen Computer synchronisiert. Online verschobene, umbenannte oder gelöschte Ordner ändern sich auch hier."
+  "picker.allSelected": "Alles in deinem OneDrive wird auf diesen Computer synchronisiert. Online verschobene, umbenannte oder gelöschte Ordner ändern sich auch hier.",
+  "startAtLogin": "Beim Anmelden synchronisieren",
+  "startAtLogin.on": "OneDrive startet beim Anmelden. Klicke, um das abzuschalten.",
+  "startAtLogin.off": "Klicke, damit OneDrive beim Anmelden startet.",
+  "startAtLogin.hint": "OneDrive startet nach einem Neustart nicht von selbst. Es bleibt pausiert, bis du es fortsetzt."
 }

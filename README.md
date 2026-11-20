@@ -45,6 +45,14 @@ window opens and runs the one-time `--resync` the client needs after a
 - It never saves an empty selection by accident. Unticking everything doesn't sync the whole drive; use **Sync my entire OneDrive** for that.
 - Unticking a folder stops it syncing. Its files stay on OneDrive, and the copy already on this computer is left in place for you to delete if you want.
 
+### Start syncing at login
+
+The panel's **Start syncing at login** switch turns the client's user service
+on or off at login (`systemctl --user enable` / `disable`). It doesn't start or
+stop syncing right now; the switch in the header does that. When it's off, the
+panel says so, because otherwise OneDrive just shows *Syncing paused* after
+every restart.
+
 ### Sync my entire OneDrive
 
 Tick **Sync my entire OneDrive** at the top of the picker and click **Apply** to

@@ -42,8 +42,24 @@ window opens and runs the one-time `--resync` the client needs after a
 
 - Your previous `sync_list` is backed up next to it (`sync_list.bak.<time>`).
 - Comments and exclusion rules (`!`, `-`) in `sync_list` are kept as they are.
-- It never saves an empty selection, because an empty `sync_list` makes the client sync your entire OneDrive.
+- It never saves an empty selection by accident. Unticking everything doesn't sync the whole drive; use **Sync my entire OneDrive** for that.
 - Unticking a folder stops it syncing. Its files stay on OneDrive, and the copy already on this computer is left in place for you to delete if you want.
+
+### Sync my entire OneDrive
+
+Tick **Sync my entire OneDrive** at the top of the picker and click **Apply** to
+mirror the whole drive. The picker backs up `sync_list`, removes it, and runs
+the resync. The panel's **Syncing** row then says *Entire OneDrive*.
+
+Choose this if you move or rename folders online. With only some folders
+selected, a folder moved online to a place outside your selection stays behind
+on this computer as a copy the client no longer tracks. Deleting that copy
+while syncing is running can delete the moved folder online. With the whole
+drive synced, every move happens here too.
+
+A `sync_list` with wildcard or exclusion rules is never removed this way, so
+those rules aren't lost; edit it by hand instead. To go back to chosen
+folders, untick the option, tick your folders and click **Apply**.
 
 ### How the picker reads your folders (please read)
 
